@@ -1,0 +1,179 @@
+Kubernetes Java Client
+
+Build Status Client Capabilities Client Support Level
+
+Java client for the kubernetes API.
+
+Client versioning
+
+The Java client uses Semantic Versioning. We increment the major version number whenever we regenerate the client for a new Kubernetes release version (see table below). Whenever we do this there are new APIs added and possibly breaking changes in the generated Kubernetes API Stubs. Whenever you upgrade a major version, be prepared for potential breaking changes.
+
+Installation
+
+To install the Java client library to your local Maven repository, simply execute:
+
+git clone --recursive https://github.com/kubernetes-client/java
+cd java
+mvn install
+Refer to the official documentation for more information.
+
+Maven users
+
+Add this dependency to your project's POM:
+
+<dependency>
+    <groupId>io.kubernetes</groupId>
+    <artifactId>client-java</artifactId>
+    <version>5.0.0</version>
+    <scope>compile</scope>
+</dependency>
+Gradle users
+
+compile 'io.kubernetes:client-java:5.0.0'
+Others
+
+At first generate the JAR by executing:
+
+git clone --recursive https://github.com/kubernetes-client/java
+cd java
+cd kubernetes
+mvn package
+Then manually install the following JARs:
+
+target/client-java-api-7.0.0-SNAPSHOT.jar
+target/lib/*.jar
+Example
+
+We prepared a few examples for common use-cases which are shown below:
+
+Configuration:
+InClusterClientExample: Configure a client while running inside the Kubernetes cluster.
+KubeConfigFileClientExample: Configure a client to access a Kubernetes cluster from outside.
+Basics:
+SimpleExample: Simple minimum example of how to use the client.
+ProtoExample: Request/receive payloads in protobuf serialization protocol.
+(5.0.0+) PatchExample: Patch resource objects in various supported patch formats, equal to kubectl patch.
+FluentExample: Construct arbitrary resource in a fluent builder style.
+YamlExample: Suggested way to load or dump resource in Yaml.
+Streaming:
+WatchExample: Subscribe watch events from certain resources, equal to kubectl get <resource> -w.
+LogsExample: Fetch logs from running containers, equal to kubectl logs.
+ExecExample: Establish an "exec" session with running containers, equal to kubectl exec.
+PortForwardExample: Maps local port to a port on the pod, equal to kubectl port-forward.
+AttachExample: Attach to a process that is already running inside an existing container, equal to kubectl attach.
+CopyExample: Copy files and directories to and from containers, equal to kubectl cp.
+WebSocketsExample: Establish an arbitrary web-socket session to certain resources.
+Advanced:
+(5.0.0+) InformerExample: Build an informer which list-watches resources and reflects the notifications to a local cache.
+(5.0.0+) PagerExample: Support Pagination (only for the list request) to ease server-side loads/network congestion.
+(6.0.0+) ControllerExample: Build a controller reconciling the state of world by list-watching one or multiple resources.
+(6.0.0+) LeaderElectionExample: Leader election utilities to help implement HA controllers.
+list all pods:
+
+import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.openapi.Configuration;
+import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1PodList;
+import io.kubernetes.client.util.Config;
+
+import java.io.IOException;
+
+public class Example {
+    public static void main(String[] args) throws IOException, ApiException{
+        ApiClient client = Config.defaultClient();
+        Configuration.setDefaultApiClient(client);
+
+        CoreV1Api api = new CoreV1Api();
+        V1PodList list = api.listPodForAllNamespaces(null, null, null, null, null, null, null, null, null);
+        for (V1Pod item : list.getItems()) {
+            System.out.println(item.getMetadata().getName());
+        }
+    }
+}
+watch on namespace object:
+
+import com.google.gson.reflect.TypeToken;
+import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.openapi.Configuration;
+import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.openapi.models.V1Namespace;
+import io.kubernetes.client.util.Config;
+import io.kubernetes.client.util.Watch;
+
+import java.io.IOException;
+
+public class WatchExample {
+    public static void main(String[] args) throws IOException, ApiException{
+        ApiClient client = Config.defaultClient();
+        Configuration.setDefaultApiClient(client);
+
+        CoreV1Api api = new CoreV1Api();
+
+        Watch<V1Namespace> watch = Watch.createWatch(
+                client,
+                api.listNamespaceCall(null, null, null, null, null, 5, null, null, Boolean.TRUE, null, null),
+                new TypeToken<Watch.Response<V1Namespace>>(){}.getType());
+
+        for (Watch.Response<V1Namespace> item : watch) {
+            System.out.printf("%s : %s%n", item.type, item.object.getMetadata().getName());
+        }
+    }
+}
+More examples can be found in examples folder. To run examples, run this command:
+
+mvn exec:java -Dexec.mainClass="io.kubernetes.client.examples.Example"
+Documentation
+
+All APIs and Models' documentation can be found at the Generated client's docs
+
+Compatibility
+
+client version	1.11	1.12	1.13	1.14	1.15
+3.0.0	✓	-	-	-	-
+4.0.0	+	✓	-	-	-
+5.0.0	+	+	✓	-	-
+6.0.1	+	+	+	✓	-
+7.0.0	+	+	+	+	✓
+Key:
+
+✓ Exactly the same features / API objects in both java-client and the Kubernetes version.
++ java-client has features or api objects that may not be present in the Kubernetes cluster, but everything they have in common will work.
+- The Kubernetes cluster has features the java-client library can't use (additional API objects, etc).
+See the CHANGELOG for a detailed description of changes between java-client versions.
+
+Contributing
+
+Please see CONTRIBUTING.md for instructions on how to contribute.
+
+Code of Conduct
+
+Participation in the Kubernetes community is governed by the CNCF Code of Conduct.
+
+Development
+
+Update the generated code.
+
+The code is generated by the openapi-generator project.
+
+We have built general purpose cross-language tools for generating code, it is hosted in the kubernetes-client/gen repository.
+
+To get started, in a root directory that is not your java client directory, for example your directory layout could be:
+
+${HOME}/
+        src/
+             gen/
+             java/
+...
+Then to clone the gen repository, you would run:
+
+cd ${HOME}/src
+git clone https://github.com/kubernetes-client/gen
+export GEN_ROOT=${PWD}
+Then to update the client:
+
+cd ${HOME}/src/java
+${GEN_ROOT}/gen/openapi/java.sh kubernetes ./settings
+This should run through a long-ish build process involving docker and eventually result in a new set of generated code in the kubernetes directory.
